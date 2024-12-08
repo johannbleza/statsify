@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 import os
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
@@ -13,10 +12,9 @@ st.set_page_config(
     layout="centered",
 )
 
-load_dotenv()
 
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+CLIENT_ID = "d3fbfc8d1d2943728cda5e732bed815a"
+CLIENT_SECRET = "092c9ad9ac124ecf93bdd02615aa731d"
 REDIRECT_URI = 'http://localhost:3000/callback'
 
 CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "spotify_token_cache")
