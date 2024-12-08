@@ -15,9 +15,11 @@ st.set_page_config(
 
 load_dotenv()
 
-CLIENT_ID= os.getenv("CLIENT_ID")
-CLIENT_SECRET= os.getenv("CLIENT_SECRET")
-REDIRECT_URI= 'http://localhost:3000/callback'
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+REDIRECT_URI = 'http://localhost:3000/callback'
+
+CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "spotify_token_cache")
 
 def get_spotify_client():
     return spotipy.Spotify(
@@ -27,10 +29,10 @@ def get_spotify_client():
             redirect_uri=REDIRECT_URI,
             scope="user-library-read user-top-read user-read-recently-played user-read-playback-state",
             show_dialog=True,
+            cache_path=CACHE_PATH
         )
     )
 sp = get_spotify_client()
-
 
 def get_recently_played():
     return sp.current_user_recently_played(limit=50)
@@ -41,14 +43,12 @@ def get_user_profile():
 def get_top_artists():
     return sp.current_user_top_artists(limit=50)
 
-
 st.title("📉 Statsify")
 st.caption("A real-time dashboard for your Spotify account. Track your listening habits, top tracks, artists, and more!")
 
-if st.button("Click here to check your Spotify stats! (Beta )"):
-    cache_file = os.path.join(os.path.dirname(__file__), '.cache')
-    if os.path.exists(cache_file):
-        os.remove(cache_file)
+if st.button("Click here to check your Spotify stats! (Beta)"):
+    if os.path.exists(CACHE_PATH):
+        os.remove(CACHE_PATH)
         st.success('Cache cleared! Restarting app...')
         st.rerun()
 
