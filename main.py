@@ -44,13 +44,12 @@ def get_top_artists():
 st.title("📉 Statsify")
 st.caption("A real-time dashboard for your Spotify account. Track your listening habits, top tracks, artists, and more!")
 
-if st.button("Click here to check your Spotify stats! (Beta)"):
-    if os.path.exists(CACHE_PATH):
-        os.remove(CACHE_PATH)
-        st.success('Cache cleared! Restarting app...')
-        st.rerun()
+if st.button("Logout"):
+    os.remove(CACHE_PATH)
+    st.success('Successfully logged out!')
+    st.rerun()
 
-st.header("Dashboard 📊")
+st.header("Dashboard")
 try:
     user = get_user_profile()
 except spotipy.exceptions.SpotifyException as e:
