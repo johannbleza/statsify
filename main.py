@@ -17,7 +17,6 @@ CLIENT_ID = "d3fbfc8d1d2943728cda5e732bed815a"
 CLIENT_SECRET = "092c9ad9ac124ecf93bdd02615aa731d"
 REDIRECT_URI = 'http://localhost:3000/callback'
 
-CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "spotify_token_cache")
 
 def get_spotify_client():
     return spotipy.Spotify(
@@ -27,7 +26,6 @@ def get_spotify_client():
             redirect_uri=REDIRECT_URI,
             scope="user-library-read user-top-read user-read-recently-played user-read-playback-state",
             show_dialog=True,
-            cache_path=CACHE_PATH
         )
     )
 sp = get_spotify_client()
@@ -44,8 +42,7 @@ def get_top_artists():
 st.title("📉 Statsify")
 st.caption("A real-time dashboard for your Spotify account. Track your listening habits, top tracks, artists, and more!")
 
-if st.button("Logout"):
-    os.remove(CACHE_PATH)
+if st.button("Login with your Spotify account! (Beta)"):
     st.success('Successfully logged out!')
     st.rerun()
 
