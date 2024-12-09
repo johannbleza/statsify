@@ -40,9 +40,9 @@ def get_spotify_client():
         pass
     
     auth_manager = SpotifyOAuth(
-        client_id=st.secrets["spotify"]["client_id"],
-        client_secret=st.secrets["spotify"]["client_secret"],
-        redirect_uri=st.secrets["spotify"]["redirect_uri"],
+        client_id="d3fbfc8d1d2943728cda5e732bed815a",
+        client_secret="092c9ad9ac124ecf93bdd02615aa731d",
+        redirect_uri="http://localhost:3000/callback",
         scope="user-library-read user-top-read user-read-recently-played user-read-playback-state",
         show_dialog=True,
         cache_handler=cache_handler
