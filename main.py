@@ -1,95 +1,57 @@
+# github repo: https://github.com/johannbleza/statsify
+
+import os
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from spotipy.cache_handler import CacheHandler
 import streamlit as st
 import pandas as pd
-import os
-from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 
-class StreamlitCacheHandler(CacheHandler):
-    """Custom cache handler that uses Streamlit's session state instead of files"""
-    def __init__(self):
-        super().__init__()
-
-    def get_cached_token(self):
-        """Get the cached token from Streamlit session state"""
-        return st.session_state.get("spotify_token")
-
-    def save_token_to_cache(self, token_info):
-        """Save the token to Streamlit session state"""
-        st.session_state["spotify_token"] = token_info
-
-def clear_session_token():
-    """Clear the token from Streamlit session state"""
-    if "spotify_token" in st.session_state:
-        del st.session_state["spotify_token"]
-    if "authenticated" in st.session_state:
-        del st.session_state["authenticated"]
-
-def get_spotify_client():
-    """Get Spotify client with custom cache handler"""
-    cache_handler = StreamlitCacheHandler()
-    load_dotenv()
-    
-    import socket
-    try:
-        import uvicorn
-        uvicorn.config.MULTIPROCESS_BROKEN = True
-    except ImportError:
-        pass
-    
-    auth_manager = SpotifyOAuth(
-        client_id="d3fbfc8d1d2943728cda5e732bed815a",
-        client_secret="092c9ad9ac124ecf93bdd02615aa731d",
-        redirect_uri="http://localhost:3000/callback",
-        scope="user-library-read user-top-read user-read-recently-played user-read-playback-state",
-        show_dialog=True,
-        cache_handler=cache_handler
-    )
-    return spotipy.Spotify(auth_manager=auth_manager)
-
-# Set custom theme configuration
+# Set default style for Streamlit
 st.set_page_config(
     page_title="Statsify",
     page_icon="📉",
     layout="centered",
 )
 
-# Add login/logout functionality
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+# Function to get Spotify client using OAuth
+def get_spotify_client():
+    return spotipy.Spotify(
+        auth_manager=SpotifyOAuth(
+            client_id=st.secrets['spotify']['client_id'], 
+            client_secret=st.secrets['spotify']['client_secret'],
+            redirect_uri=st.secrets['spotify']['redirect_uri'],
+            scope="user-library-read user-top-read user-read-recently-played user-read-playback-state",
+            show_dialog=True,
+        )
+    )
 
-
+# Initialize Spotify client
 sp = get_spotify_client()
 
+# Function to get recently played tracks
 def get_recently_played():
     return sp.current_user_recently_played(limit=50)
 
+# Function to get user profile
 def get_user_profile():
     return sp.current_user()
 
+# Function to get top artists
 def get_top_artists():
     return sp.current_user_top_artists(limit=50)
 
+# Streamlit app title and description
 st.title("📉 Statsify")
-st.caption("A real-time dashboard for your Spotify account. Track your listening habits, top tracks, artists, and more!")
+st.caption("A real-time dashboard for your Spotify account. Visualize and track your listening habits, top tracks, artists, and more!")
 
+# Button to login with Spotify account
+if st.button("Login with your Spotify account!"):
+    if os.path.exists('.cache'):
+        os.remove('.cache')
+    st.rerun()
 
-if st.button("Login with Spotify" if not st.session_state.authenticated else "Logout"):
-    if st.session_state.authenticated:
-        clear_session_token()
-        st.success("Successfully logged out!")
-        st.rerun()
-    else:
-        try:
-            sp = get_spotify_client()
-            user = sp.current_user()  # Test the connection
-            st.session_state.authenticated = True
-            st.success("Successfully logged in!")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Login failed: {str(e)}")
+# Dashboard 
 st.header("Dashboard")
 try:
     user = get_user_profile()
@@ -97,6 +59,7 @@ except spotipy.exceptions.SpotifyException as e:
     st.error(f"Error fetching user profile data: No access to beta")
     st.stop()
 
+# Get recently played tracks
 recently_played = get_recently_played()
 track = recently_played['items'][0]['track']
 
@@ -169,15 +132,19 @@ st.divider()
 st.subheader("Recent Activity 📅")
 st.caption("Listened minutes over a period of time.")
 
+# Calculate durations and played times for recently played tracks
 durations = [item['track']['duration_ms'] / 60000 for item in recently_played['items']]
 played_times = [pd.to_datetime(item['played_at']) for item in recently_played['items']]
 
+# Create DataFrame for recent activity
 df = pd.DataFrame({'played_at': played_times, 'duration': durations})
 df.set_index('played_at', inplace=True)
 
-period = st.selectbox("Select time period", ["1H", "2H", "4H", "6H"], index=0)
+# Select time period for resampling
+period = st.selectbox("Select time period", ["1H", "2H", "4H", "6H"], index=1)
 listening_time = df['duration'].resample(period).sum()
 
+# Display area chart for recent activity
 st.area_chart(listening_time, y_label="Number of Minutes", x_label="Period")
 col1, col2, col3 = st.columns([5, 1, 3])
 
@@ -189,6 +156,7 @@ with col1:
     track_counts = pd.Series(tracks).value_counts().head(10)
     st.bar_chart(track_counts, x_label="Tracks", y_label="Count")
 
+    # Top genres section
     top_artists = get_top_artists()
     genres = [genre for artist in top_artists['items'] for genre in artist['genres']]
     genre_counts = pd.Series(genres).value_counts().head(5)
@@ -201,6 +169,7 @@ with col1:
     fig.patch.set_alpha(0)
     st.pyplot(fig)
 
+    # Current favorites section
     artist_names = [item['track']['artists'][0]['name'] for item in recently_played['items']]
     artist_counts = pd.Series(artist_names).value_counts().head(5)
 
@@ -241,13 +210,14 @@ with col3:
         with col2:
             st.write(artist['name'])
 
-# Top artists by popularity section
+# Top artists by popularity section with adjustable limit
 st.subheader("Top Artists by Popularity ⭐️")
-st.caption("Your top artists based on their popularity.")
-artist_names = [artist['name'] for artist in top_artists['items']]
-popularity = [artist['popularity'] for artist in top_artists['items']]
+limit = st.slider("Select the number of top artists to display", min_value=1, max_value=50, value=10)
+st.caption(f"Your top {limit} artists based on popularity.")
+artist_names = [artist['name'] for artist in top_artists['items'][:limit]]
+popularity = [artist['popularity'] for artist in top_artists['items'][:limit]]
 df_popularity = pd.DataFrame({'Artist': artist_names, 'Popularity': popularity})
 df_popularity.set_index('Artist', inplace=True)
-st.bar_chart(df_popularity, y_label="Popularity")
+st.bar_chart(df_popularity, y_label="Popularity", x_label="Artists")
 
 st.caption("Created by Johann.dev")
